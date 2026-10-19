@@ -45,3 +45,10 @@ site/.vercel/
 site/.netlify/
 site/.env
 site/.env.*
+
+# Python #
+##########
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/

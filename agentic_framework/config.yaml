@@ -1,0 +1,70 @@
+# Agentic Workflow Framework configuration.
+#
+# Everything the orchestrator and agents are allowed to do is declared here.
+# The loader in `config.py` validates this file at startup and refuses to run
+# with an invalid or incomplete configuration.
+
+orchestrator:
+  # Number of concurrent workers pulling tasks off the queue.
+  max_concurrency: 2
+  # Maximum number of tasks that may wait in the queue at once (0 = unbounded).
+  queue_maxsize: 100
+  # Hard wall-clock limit for a single agent attempt.
+  agent_timeout_seconds: 10
+  # Upper bound on agent-to-agent handoffs per task (guards against loops).
+  max_handoffs: 5
+  retry:
+    # Total attempts per agent step (1 = no retries).
+    max_attempts: 3
+    # delay = min(max_delay, base_delay * backoff_factor ** (attempt - 1)) + jitter
+    base_delay_seconds: 0.5
+    backoff_factor: 2.0
+    max_delay_seconds: 8.0
+    # Random jitter added to each delay, as a fraction of the computed delay.
+    jitter_ratio: 0.1
+
+# Ordered default handoff chain. An agent may override the next hop by
+# returning an explicit `handoff_to`, but only to an agent defined below.
+pipeline:
+  - research
+  - summary
+
+agents:
+  research:
+    class: ResearchAgent
+    role: >-
+      Research analyst. Collects raw source material for a task by fetching
+      the provided URLs and returns cleaned, attributed text snippets.
+    rules:
+      - Only fetch URLs whose host is listed in boundaries.allowed_domains.
+      - Never fetch more than boundaries.max_sources sources per task.
+      - Always attribute every snippet to its source URL.
+      - Do not summarise or editorialise; hand raw findings to the summary agent.
+    boundaries:
+      allowed_domains:
+        - example.com
+        - github.blog
+        - docs.github.com
+      max_sources: 3
+      max_content_chars: 2000
+    simulation:
+      # Probability that a simulated fetch raises a transient network error.
+      failure_rate: 0.0
+      latency_seconds: 0.05
+
+  summary:
+    class: SummaryAgent
+    role: >-
+      Summarisation specialist. Distils research findings into a short,
+      factual brief using the configured LLM.
+    rules:
+      - Use only facts present in the research findings; never invent sources.
+      - Keep the summary within boundaries.max_summary_words words.
+      - Reply in plain text without markdown headings.
+    boundaries:
+      max_input_chars: 6000
+      max_summary_words: 60
+    llm:
+      provider: mock
+      model: mock-distiller-1
+      temperature: 0.2
