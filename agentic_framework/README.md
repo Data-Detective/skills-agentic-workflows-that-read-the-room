@@ -107,7 +107,7 @@ agents:
     llm: { provider: mock, model: mock-distiller-1, temperature: 0.2 }
 ```
 
-Validation rejects missing sections, empty or non-string rules, a pipeline that references undefined agents, non-positive or non-numeric limits, `backoff_factor < 1` and unregistered agent classes.
+Validation rejects missing sections, empty or non-string rules, a pipeline that references undefined or duplicate agents, non-positive or non-numeric limits, `backoff_factor < 1`, `max_delay_seconds < base_delay_seconds`, and missing or unregistered agent classes.
 
 ---
 
@@ -176,7 +176,7 @@ Task(payload)                        TaskState
                            │         ├─ artifacts{agent: out}  each agent's output, keyed by agent name
                            ▼         ├─ attempts{agent: n}     attempts per agent (incl. retries)
                        worker        ├─ history[]              timestamped event log
-                           │         └─ error                  "<agent>: <message>" on failure
+                           │         └─ error                  "<agent|routing>: <message>" on failure
                            ▼
   1. status=running, history += task_started
   2. agent = pipeline[0]
@@ -189,6 +189,7 @@ Task(payload)                        TaskState
          └─ success → history += agent_succeeded
        artifacts[agent] = result.output
        next = END? stop : result.handoff_to or next agent in pipeline
+         (unknown target / max_handoffs exceeded → task_failed, error "routing: ..."; STOP)
        history += handoff(from_agent, to_agent)   (bounded by max_handoffs)
   4. status=succeeded, current_agent=None, history += task_succeeded
 ```
