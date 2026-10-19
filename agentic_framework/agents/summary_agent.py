@@ -22,7 +22,7 @@ class SummaryAgent(BaseAgent):
 
     def build_prompt(self, topic: str, sources: list[dict]) -> str:
         max_chars = int(self.boundary("max_input_chars", 8000))
-        body = "\n".join(f"{s['content']}" for s in sources)[:max_chars]
+        body = "\n".join(s["content"] for s in sources)[:max_chars]
         return f"Summarise the findings below about '{topic}'.\nFINDINGS:\n{body}"
 
     async def run(self, state: TaskState) -> AgentResult:

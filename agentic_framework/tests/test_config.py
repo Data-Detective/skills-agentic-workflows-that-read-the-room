@@ -48,6 +48,8 @@ def test_retry_policy_backoff_is_exponential_and_capped():
         (lambda r: r.update(pipeline=["research", "ghost"]), "ghost"),
         (lambda r: r["orchestrator"]["retry"].update(max_attempts=0), "max_attempts"),
         (lambda r: r["orchestrator"]["retry"].update(backoff_factor=0.5), "backoff_factor"),
+        (lambda r: r["orchestrator"]["retry"].update(max_delay_seconds=0.1), "max_delay_seconds"),
+        (lambda r: r.update(pipeline=["research", "summary", "research"]), "duplicate"),
         (lambda r: r["orchestrator"].update(max_concurrency="many"), "max_concurrency"),
         (lambda r: r["orchestrator"].update(agent_timeout_seconds=True), "agent_timeout_seconds"),
         (lambda r: r["agents"]["research"].pop("rules"), "rules"),

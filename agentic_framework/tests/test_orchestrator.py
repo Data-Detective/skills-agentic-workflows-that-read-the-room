@@ -130,7 +130,8 @@ def test_handoff_to_unknown_agent_fails(make_orch):
     [state] = run(make_orch(agents).run([Task(payload={})]))
 
     assert state.status is TaskStatus.FAILED
-    assert "ghost" in state.error
+    assert state.error.startswith("routing:") and "ghost" in state.error
+    assert state.artifacts == {"research": "r"}
 
 
 def test_handoff_loop_is_capped_by_max_handoffs(make_config, fake_sleep, zero_rng):
@@ -140,7 +141,7 @@ def test_handoff_loop_is_capped_by_max_handoffs(make_config, fake_sleep, zero_rn
     [state] = run(orch.run([Task(payload={})]))
 
     assert state.status is TaskStatus.FAILED
-    assert "max_handoffs" in state.error
+    assert state.error.startswith("routing:") and "max_handoffs" in state.error
     assert len(events(state, "handoff")) == 3
 
 

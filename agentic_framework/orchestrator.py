@@ -111,26 +111,36 @@ class Orchestrator:
             state.current_agent = agent_name
             try:
                 result = await self._run_with_retry(agent_name, self.agents[agent_name], state)
-                state.artifacts[agent_name] = result.output
+            except AgentError as exc:
+                return self._fail(state, agent_name, exc, source=agent_name)
+            state.artifacts[agent_name] = result.output
+
+            # Routing errors are attributed to the orchestrator, not the agent that succeeded.
+            try:
                 next_agent = self._next_agent(agent_name, result)
                 if next_agent is not None:
                     handoffs += 1
                     if handoffs > self.config.max_handoffs:
                         raise PermanentAgentError(f"exceeded max_handoffs ({self.config.max_handoffs})")
-                    state.record("handoff", from_agent=agent_name, to_agent=next_agent)
-                    logger.info("task %s: handoff %s -> %s", state.task_id, agent_name, next_agent)
             except AgentError as exc:
-                state.status = TaskStatus.FAILED
-                state.error = f"{agent_name}: {exc}"
-                state.record("task_failed", agent=agent_name, error=str(exc), error_type=type(exc).__name__)
-                logger.warning("task %s failed in %s: %s", state.task_id, agent_name, exc)
-                return state
+                return self._fail(state, agent_name, exc, source="routing")
+            if next_agent is not None:
+                state.record("handoff", from_agent=agent_name, to_agent=next_agent)
+                logger.info("task %s: handoff %s -> %s", state.task_id, agent_name, next_agent)
             agent_name = next_agent
 
         state.current_agent = None
         state.status = TaskStatus.SUCCEEDED
         state.record("task_succeeded")
         logger.info("task %s succeeded", state.task_id)
+        return state
+
+    @staticmethod
+    def _fail(state: TaskState, agent_name: str, exc: AgentError, *, source: str) -> TaskState:
+        state.status = TaskStatus.FAILED
+        state.error = f"{source}: {exc}"
+        state.record("task_failed", agent=agent_name, source=source, error=str(exc), error_type=type(exc).__name__)
+        logger.warning("task %s failed (%s): %s", state.task_id, source, exc)
         return state
 
     def _next_agent(self, current: str, result: AgentResult) -> str | None:

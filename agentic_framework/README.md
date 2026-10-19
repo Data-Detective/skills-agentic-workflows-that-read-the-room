@@ -130,7 +130,7 @@ python orchestrator.py --topic "agentic workflows" \
 python orchestrator.py --config ./config.yaml --log-level DEBUG
 ```
 
-Exit codes: `0` means every task succeeded, `1` means at least one task failed, and `2` means the configuration is invalid.
+Exit codes: `0` means every task succeeded, `1` means at least one task failed, and `2` means the configuration or the CLI arguments are invalid. For example, `--topic` without any `--url` is rejected. With no `--url`, the demo tasks run.
 
 To see retries in action, set `agents.research.simulation.failure_rate` to `0.5` and run with `--log-level INFO`.
 

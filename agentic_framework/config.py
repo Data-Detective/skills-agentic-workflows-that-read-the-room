@@ -103,6 +103,8 @@ def parse_config(raw: Any) -> FrameworkConfig:
     )
     if retry.backoff_factor < 1:
         raise ConfigError("retry.backoff_factor must be >= 1")
+    if retry.max_delay_seconds < retry.base_delay_seconds:
+        raise ConfigError("retry.max_delay_seconds must be >= retry.base_delay_seconds")
 
     agents_raw = _require(raw, "agents", "root")
     if not isinstance(agents_raw, dict) or not agents_raw:
@@ -141,6 +143,8 @@ def parse_config(raw: Any) -> FrameworkConfig:
     for step in pipeline:
         if step not in agents:
             raise ConfigError(f"pipeline references undefined agent '{step}'")
+    if len(set(pipeline)) != len(pipeline):
+        raise ConfigError("pipeline must not contain duplicate agents")
 
     return FrameworkConfig(
         max_concurrency=_positive_int(orch.get("max_concurrency", 1), "orchestrator.max_concurrency"),
