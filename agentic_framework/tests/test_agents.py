@@ -205,6 +205,16 @@ def test_summary_agent_requires_research(summary_cfg, artifacts):
         run(SummaryAgent(summary_cfg, llm=StubLLM(reply="x")).run(state_with(artifacts=artifacts)))
 
 
+@pytest.mark.parametrize(
+    "sources",
+    ["not-a-list", [{"url": "https://example.com"}], [{"content": "x"}], ["string-entry"]],
+)
+def test_summary_agent_rejects_malformed_sources(summary_cfg, sources):
+    research = {"topic": "t", "sources": sources}
+    with pytest.raises(PermanentAgentError, match="research sources"):
+        run(SummaryAgent(summary_cfg, llm=StubLLM(reply="x")).run(state_with(artifacts={"research": research})))
+
+
 def test_summary_agent_llm_error_is_transient(summary_cfg):
     agent = SummaryAgent(summary_cfg, llm=StubLLM(error=LLMError("rate limited")))
     with pytest.raises(TransientAgentError, match="rate limited"):

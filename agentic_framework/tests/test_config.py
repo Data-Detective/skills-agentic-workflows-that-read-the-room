@@ -54,6 +54,8 @@ def test_retry_policy_backoff_is_exponential_and_capped():
         (lambda r: r["agents"]["research"].update(rules="not-a-list"), "rules"),
         (lambda r: r["agents"]["summary"].update(role="  "), "role"),
         (lambda r: r["agents"]["summary"].update(boundaries=["x"]), "boundaries"),
+        (lambda r: r["agents"]["summary"].update({"class": None}), "class"),
+        (lambda r: r["agents"]["summary"].update({"class": ""}), "class"),
     ],
 )
 def test_invalid_config_is_rejected(raw_config, mutate, message):

@@ -110,7 +110,7 @@ class Orchestrator:
         while agent_name is not None:
             state.current_agent = agent_name
             try:
-                result = await self._run_with_retry(self.agents[agent_name], state)
+                result = await self._run_with_retry(agent_name, self.agents[agent_name], state)
                 state.artifacts[agent_name] = result.output
                 next_agent = self._next_agent(agent_name, result)
                 if next_agent is not None:
@@ -148,18 +148,18 @@ class Orchestrator:
 
     # ------------------------------------------------------------------ retry
 
-    async def _run_with_retry(self, agent: BaseAgent, state: TaskState) -> AgentResult:
+    async def _run_with_retry(self, name: str, agent: BaseAgent, state: TaskState) -> AgentResult:
         policy = self.config.retry
         timeout = self.config.agent_timeout_seconds
 
         for attempt in range(1, policy.max_attempts + 1):
-            state.attempts[agent.name] = state.attempts.get(agent.name, 0) + 1
-            state.record("agent_attempt", agent=agent.name, attempt=attempt)
+            state.attempts[name] = state.attempts.get(name, 0) + 1
+            state.record("agent_attempt", agent=name, attempt=attempt)
             try:
                 result = await asyncio.wait_for(agent.run(state), timeout=timeout)
                 if not isinstance(result, AgentResult):
                     raise PermanentAgentError(f"agent returned {type(result).__name__}, expected AgentResult")
-                state.record("agent_succeeded", agent=agent.name, attempt=attempt)
+                state.record("agent_succeeded", agent=name, attempt=attempt)
                 return result
             except asyncio.TimeoutError:
                 error: AgentError = TransientAgentError(f"timed out after {timeout}s")
@@ -169,14 +169,14 @@ class Orchestrator:
                 error = PermanentAgentError(f"unexpected {type(exc).__name__}: {exc}")
 
             if not error.retryable or attempt >= policy.max_attempts:
-                state.record("agent_failed", agent=agent.name, attempt=attempt, error=str(error))
+                state.record("agent_failed", agent=name, attempt=attempt, error=str(error))
                 raise error
 
             delay = policy.delay_for(attempt, self._rng.random())
-            state.record("retry_scheduled", agent=agent.name, attempt=attempt, delay=round(delay, 4), error=str(error))
+            state.record("retry_scheduled", agent=name, attempt=attempt, delay=round(delay, 4), error=str(error))
             logger.info(
                 "task %s: %s attempt %d failed (%s); retrying in %.2fs",
-                state.task_id, agent.name, attempt, error, delay,
+                state.task_id, name, attempt, error, delay,
             )
             await self._sleep(delay)
 
@@ -203,7 +203,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--topic", help="topic for a single ad-hoc task")
     parser.add_argument("--url", action="append", dest="urls", help="source URL (repeatable)")
     parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.topic and not args.urls:
+        parser.error("--topic requires at least one --url")
+    return args
 
 
 async def main(argv: list[str] | None = None) -> int:

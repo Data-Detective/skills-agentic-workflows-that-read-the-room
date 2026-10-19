@@ -122,10 +122,13 @@ def parse_config(raw: Any) -> FrameworkConfig:
         role = _require(spec, "role", where)
         if not isinstance(role, str) or not role.strip():
             raise ConfigError(f"{where}.role must be a non-empty string")
+        class_name = _require(spec, "class", where)
+        if not isinstance(class_name, str) or not class_name.strip():
+            raise ConfigError(f"{where}.class must be a non-empty string")
         settings = {k: v for k, v in spec.items() if k not in {"class", "role", "rules", "boundaries"}}
         agents[name] = AgentConfig(
             name=name,
-            class_name=str(_require(spec, "class", where)),
+            class_name=class_name.strip(),
             role=role.strip(),
             rules=tuple(rules),
             boundaries=dict(boundaries),

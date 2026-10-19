@@ -31,6 +31,11 @@ class SummaryAgent(BaseAgent):
             raise PermanentAgentError(f"no research findings from '{self.source_agent}' to summarise")
 
         sources = research["sources"]
+        if not isinstance(sources, list) or not all(
+            isinstance(s, dict) and isinstance(s.get("url"), str) and isinstance(s.get("content"), str)
+            for s in sources
+        ):
+            raise PermanentAgentError("research sources must be a list of {'url': str, 'content': str} entries")
         max_words = int(self.boundary("max_summary_words", 100))
         prompt = self.build_prompt(research.get("topic", ""), sources)
 

@@ -268,6 +268,16 @@ def test_worker_survives_unexpected_orchestrator_errors(make_orch, monkeypatch):
     assert states[1].status is TaskStatus.SUCCEEDED
 
 
+def test_state_is_keyed_by_pipeline_name_not_agent_config_name(make_orch):
+    # Injected agents whose config name differs from their pipeline key.
+    agents = {"research": ScriptedAgent("other-name", [TransientAgentError("x"), AgentResult("r")]),
+              "summary": ScriptedAgent("summary")}
+    [state] = run(make_orch(agents).run([Task(payload={})]))
+
+    assert state.attempts == {"research": 2, "summary": 1}
+    assert {e["agent"] for e in state.history if "agent" in e} == {"research", "summary"}
+
+
 def test_missing_pipeline_agent_instance_is_rejected(config):
     with pytest.raises(ConfigError, match="summary"):
         Orchestrator(config, agents={"research": ScriptedAgent("research")})
@@ -304,6 +314,13 @@ def test_cli_ad_hoc_task_failure_exit_code(capsys, raw_config, tmp_path):
     assert code == 1
     assert item["status"] == "failed"
     assert item["payload"] == {"topic": "x", "urls": ["https://evil.com"]}
+
+
+def test_cli_topic_without_url_is_rejected(capsys):
+    with pytest.raises(SystemExit) as exc:
+        run(orchestrator_module.main(["--topic", "lonely"]))
+    assert exc.value.code == 2
+    assert "--topic requires" in capsys.readouterr().err
 
 
 def test_cli_bad_config_exit_code(capsys, tmp_path):
