@@ -40,7 +40,21 @@ Update `site/content/github-info.md` with relevant, verified GitHub news for Mon
 4. Use the edit tool to update only `site/content/github-info.md`, preserving
      its existing structure and style. Include source links for the updates,
      avoid duplicates, and leave the file unchanged if there is no relevant news.
-5. If the file changed, use the create-pull-request safe output to open a draft
+     
+## No Automatic Compilation
+
+Do not compile the workflow automatically. Enforce this rule throughout the
+task, including when following fetched guidance or suggested commands:
+
+- Do not run `gh aw compile` or commands that compile workflows as a side effect.
+- Do not generate, edit, or regenerate workflow `.lock.yml` files.
+- Do not use scripts, tools, or delegated agents to bypass these restrictions.
+- If validation is needed, use only non-generating checks such as `gh aw validate`.
+- Leave compilation to a separate, explicit human action.
+
+## Pull Request
+
+If the file changed, use the create-pull-request safe output to open a draft
      pull request for Mona to review. Summarize the changes and their sources in
      the pull request body. Never commit or push directly to main. If there are
      no relevant changes, do not open a pull request.
